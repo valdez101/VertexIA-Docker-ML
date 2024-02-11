@@ -1,0 +1,27 @@
+docker secret create mi_secreto gcp-credentials.json
+
+
+PROJECT_ID='tottus-ml-iris'
+BUCKET=gs://tottus-backet-iris
+gsutil -m cp -r datos $BUCKET
+
+cd iris
+REPO_NAME=' tottus-repo-new'
+
+IMAGE_URI=us-east1-docker.pkg.dev/$PROJECT_ID/tottus-repo-new/iris_image:latest
+docker build ./ -t $IMAGE_URI
+
+gcloud auth configure-docker us-east1-docker.pkg.dev
+docker push us-east1-docker.pkg.dev/tottus-ml-iris/tottus-repo-new/iris_image:latest 
+
+docker run -d --name iris_container --secret gcp-credentials us-east1-docker.pkg.dev/tottus-ml-iris/tottus-repo-new/iris_image:latest 
+
+docker secret rm mi_secreto
+
+docker service rm iris_container
+
+docker run -d --name iris_container --secret source=mi_secreto,target=mi_secreto iris_image:latest
+
+echo "mi_secreto" > /tmp/gcp-credentials.txt
+
+docker run -d --name iris_container -v /tmp/gcp-credentials.txt:/path/in/container/gcp-credentials.txt us-east1-docker.pkg.dev/tottus-ml-iris/tottus-repo-new/iris_image:latest
